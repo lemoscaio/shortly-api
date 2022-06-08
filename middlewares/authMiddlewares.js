@@ -1,4 +1,5 @@
 import { newUserSchema } from "./../schemas/newUserSchema.js"
+import { loginSchema } from "./../schemas/loginSchema.js"
 import chalk from "chalk"
 
 export async function validateNewUserData(req, res, next) {
@@ -12,6 +13,17 @@ export async function validateNewUserData(req, res, next) {
 
   try {
     await newUserSchema.validateAsync(req.body)
+  } catch (error) {
+    console.log(chalk.red(error))
+    return res.status(422).send({ error: error.details[0].message })
+  }
+
+  next()
+}
+
+export async function validateLoginData(req, res, next) {
+  try {
+    await loginSchema.validateAsync(req.body)
   } catch (error) {
     console.log(chalk.red(error))
     return res.status(422).send({ error: error.details[0].message })
