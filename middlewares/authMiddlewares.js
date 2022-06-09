@@ -9,8 +9,6 @@ const { JWT_SECRET_KEY, VERBOSE } = process.env
 
 export function validateData(schema) {
   return (validateData[schema] = async (req, res, next) => {
-    const { password, confirmPassword } = req.body
-
     try {
       await schema.validateAsync(req.body, { abortEarly: false })
     } catch (error) {

@@ -1,14 +1,15 @@
 import { Router } from "express"
 
 import { validateData, validateToken } from "../middlewares/authMiddlewares.js"
-import { shortenURL } from "../controllers/shortenController.js"
+import { shortenUrl, getUrl } from "../controllers/urlsController.js"
 import { urlSchema } from "../schemas/urlSchema.js"
 
-export const shortenRouter = Router()
+export const urlsRouter = Router()
 
-shortenRouter.post(
+urlsRouter.post(
   "/urls/shorten",
   validateToken,
   validateData(urlSchema),
-  shortenURL,
+  shortenUrl,
 )
+urlsRouter.get("/urls/:id", getUrl)
