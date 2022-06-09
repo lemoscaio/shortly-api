@@ -1,32 +1,48 @@
-import { newUserSchema } from "./../schemas/newUserSchema.js"
-import { loginSchema } from "./../schemas/loginSchema.js"
+import jwt from "jsonwebtoken"
 import chalk from "chalk"
+import dotenv from "dotenv"
+dotenv.config()
 
-export async function validateNewUserData(req, res, next) {
-  const { password, confirmPassword } = req.body
+import db from "../config/db.js"
 
-  if (password !== confirmPassword) {
-    return res.status(400).send({
-      error: "Passwords do not match",
-    })
-  }
+const { JWT_SECRET_KEY, VERBOSE } = process.env
 
-  try {
-    await newUserSchema.validateAsync(req.body)
-  } catch (error) {
-    console.log(chalk.red(error))
-    return res.status(422).send({ error: error.details[0].message })
-  }
+export function validateData(schema) {
+  return (validateData[schema] = async (req, res, next) => {
+    const { password, confirmPassword } = req.body
 
-  next()
+    try {
+      await schema.validateAsync(req.body, { abortEarly: false })
+    } catch (error) {
+      if (VERBOSE) console.log(chalk.red(error))
+      return res.status(422).send(error.details.map(({ message }) => message))
+    }
+
+    next()
+  })
 }
 
-export async function validateLoginData(req, res, next) {
+export async function validateToken(req, res, next) {
+  const { authorization } = req.headers
+
+  const regexResult = authorization?.match(/^(Bearer )/g)
+  if (!regexResult)
+    return res
+      .status(401)
+      .send("You must pass an authorization token in the request header")
+
+  const token = authorization?.replace("Bearer ", "").trim()
+  if (!token) return res.sendStatus(401)
+
   try {
-    await loginSchema.validateAsync(req.body)
+    const data = await jwt.verify(token, JWT_SECRET_KEY)
+    const user = await db.query(
+      `SELECT users.id, users.name, users.email FROM users WHERE users.email = '${data.email}'`,
+    )
+    res.locals.user = user.rows[0]
   } catch (error) {
-    console.log(chalk.red(error))
-    return res.status(422).send({ error: error.details[0].message })
+    if (VERBOSE) console.log(error)
+    return res.sendStatus(401)
   }
 
   next()

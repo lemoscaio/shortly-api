@@ -2,7 +2,7 @@ import db from "../config/db.js"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 
-const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY
+const { JWT_SECRET_KEY, VERBOSE } = process.env
 
 export async function registerUser(req, res) {
   const { name, email, password } = req.body
@@ -40,10 +40,9 @@ export async function loginUser(req, res) {
       const token = jwt.sign({ email }, JWT_SECRET_KEY)
       return res.status(200).send({ token })
     }
-
-    res.send(401)
+    res.sendStatus(401)
   } catch (error) {
-    console.log(error)
+    if (VERBOSE) console.log(error)
     res.sendStatus(500)
   }
 }

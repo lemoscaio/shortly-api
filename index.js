@@ -16,6 +16,7 @@ app.get("/", (req, res) => res.send("Online"))
 
 const port = process.env.PORT || 5000
 app.listen(port, () => {
-  console.log(chalk.green(`mode: ${process.env.MODE || "not defined -> DEV"}`))
+  console.log(chalk.green(`Mode: ${process.env.MODE || "not defined -> DEV"}`))
+  console.log(chalk.green(`Verbose: ${process.env.VERBOSE || "false"}`))
   console.log(chalk.green(`server is up and running on port ${port}`))
 })

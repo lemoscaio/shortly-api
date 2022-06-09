@@ -8,7 +8,5 @@ export const newUserSchema = Joi.object({
   password: Joi.string()
     .pattern(/^\S{6,20}$/)
     .required(),
-  confirmPassword: Joi.string()
-    .pattern(/^\S{6,20}$/)
-    .required(),
+  confirmPassword: Joi.string().required().equal(Joi.ref("password")),
 })
