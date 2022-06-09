@@ -74,3 +74,20 @@ export async function openUrl(req, res) {
     return res.sendStatus(500)
   }
 }
+
+export async function deleteUrl(req, res) {
+  const { id } = req.params
+
+  try {
+    const result = await db.query(
+      `DELETE FROM urls WHERE urls.id = ${SqlString.escape(id)}`,
+    )
+    if (VERBOSE) console.log("🚀 ~ result", result)
+
+    if (result.rowCount === 0) return res.sendStatus(404)
+    return res.send(204)
+  } catch (error) {
+    if (VERBOSE) console.log("🚀 ~ error", error)
+    return res.sendStatus(500)
+  }
+}
