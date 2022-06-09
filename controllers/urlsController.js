@@ -4,8 +4,6 @@ import SqlString from "sqlString"
 
 const { VERBOSE } = process.env
 
-console.log(SqlString)
-
 export async function shortenUrl(req, res) {
   const { url } = req.body
   const { user } = res.locals
@@ -17,9 +15,9 @@ export async function shortenUrl(req, res) {
       `INSERT INTO urls (url, short_url, user_id ) VALUES ($1, $2, ${user.id})`,
       [url, shortUrl],
     )
-    if (VERBOSE) console.log(result)
+    if (VERBOSE) console.log("🚀 ~ result", result)
   } catch (error) {
-    if (VERBOSE) console.log(error)
+    if (VERBOSE) console.log("🚀 ~ error", error)
     if (error.code === "23505") return shortenUrl(req, res)
     return res.sendStatus(400)
   }
@@ -36,12 +34,43 @@ export async function getUrl(req, res) {
         id,
       )}`,
     )
-    if (VERBOSE) console.log(result)
+    if (VERBOSE) console.log("🚀 ~ result", result)
 
     if (result.rowCount === 0) return res.sendStatus(404)
     return res.send(result.rows[0])
   } catch (error) {
-    if (VERBOSE) console.log(error)
+    if (VERBOSE) console.log("🚀 ~ error", error)
+    return res.sendStatus(500)
+  }
+}
+
+export async function openUrl(req, res) {
+  const { shortUrl } = req.params
+
+  try {
+    const result = await db.query(
+      `SELECT urls.url, urls.visits FROM urls WHERE urls.short_url = ${SqlString.escape(
+        shortUrl,
+      )}`,
+    )
+    if (VERBOSE) console.log("🚀 ~ result", result)
+
+    if (result.rowCount === 0) return res.sendStatus(404)
+
+    const { url, visits } = result.rows[0]
+    console.log("🚀 ~ visits", visits)
+    console.log("🚀 ~ url", url)
+
+    const updated = await db.query(
+      `UPDATE urls SET visits = ${
+        visits + 1
+      } WHERE urls.short_url = ${SqlString.escape(shortUrl)}`,
+    )
+    if (VERBOSE) console.log("🚀 ~ updated", updated)
+
+    return res.redirect(url)
+  } catch (error) {
+    if (VERBOSE) console.log("🚀 ~ error", error)
     return res.sendStatus(500)
   }
 }
