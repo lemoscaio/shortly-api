@@ -1,5 +1,5 @@
 import db from "../config/db.js"
-import SqlString from "sqlString"
+import SqlString from "sqlstring"
 
 async function insertNewUser(params) {
   return db.query(
