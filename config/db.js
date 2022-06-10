@@ -14,12 +14,12 @@ const devConfig = {
 
 const prodConfig = { connectionString: process.env.DATABASE_URL }
 
-const db = new Pool(process.env.NODE_ENV === "PROD" ? prodConfig : devConfig)
-
 if (process.env.MODE === "PROD") {
-  db.ssl = {
+  prodConfig.ssl = {
     rejectUnauthorized: false,
   }
 }
+
+const db = new Pool(process.env.NODE_ENV === "PROD" ? prodConfig : devConfig)
 
 export default db
