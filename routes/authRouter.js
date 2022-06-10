@@ -1,6 +1,7 @@
 import { Router } from "express"
 
-import { validateData, validateToken } from "../middlewares/authMiddlewares.js"
+import { validateToken } from "../middlewares/authMiddlewares.js"
+import { validateData } from "../middlewares/dataMiddlewares.js"
 import { registerUser, loginUser } from "../controllers/authController.js"
 
 import { newUserSchema } from "./../schemas/newUserSchema.js"

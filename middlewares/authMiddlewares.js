@@ -1,24 +1,11 @@
 import jwt from "jsonwebtoken"
-import chalk from "chalk"
 import dotenv from "dotenv"
 dotenv.config()
 
-import db from "../config/db.js"
+import verboseConsoleLog from "../utils/verboseConsoleLog.js"
+import { userRepository } from "../repositories/userRepository.js"
 
-const { JWT_SECRET_KEY, VERBOSE } = process.env
-
-export function validateData(schema) {
-  return (validateData[schema] = async (req, res, next) => {
-    try {
-      await schema.validateAsync(req.body, { abortEarly: false })
-    } catch (error) {
-      if (VERBOSE) console.log(chalk.red(error))
-      return res.status(422).send(error.details.map(({ message }) => message))
-    }
-
-    next()
-  })
-}
+const { JWT_SECRET_KEY } = process.env
 
 export async function validateToken(req, res, next) {
   const { authorization } = req.headers
@@ -33,13 +20,11 @@ export async function validateToken(req, res, next) {
   if (!token) return res.sendStatus(401)
 
   try {
-    const data = await jwt.verify(token, JWT_SECRET_KEY)
-    const user = await db.query(
-      `SELECT users.id, users.name, users.email FROM users WHERE users.email = '${data.email}'`,
-    )
+    const data = jwt.verify(token, JWT_SECRET_KEY)
+    const user = await userRepository.getUserByEmail(data.email)
     res.locals.user = user.rows[0]
   } catch (error) {
-    if (VERBOSE) console.log(error)
+    verboseConsoleLog("Error:", error)
     return res.sendStatus(401)
   }
 

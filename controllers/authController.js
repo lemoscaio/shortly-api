@@ -1,21 +1,17 @@
-import db from "../config/db.js"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
+import { userRepository } from "../repositories/userRepository.js"
+import verboseConsoleLog from "../utils/verboseConsoleLog.js"
 
-const { JWT_SECRET_KEY, VERBOSE } = process.env
+const { JWT_SECRET_KEY } = process.env
 
 export async function registerUser(req, res) {
   const { name, email, password } = req.body
-
   const encryptedPassword = bcrypt.hashSync(password, 10)
-
   const params = [name, email, encryptedPassword]
 
   try {
-    const result = await db.query(
-      `INSERT INTO users (name, email, password) VALUES ($1, $2, $3)`,
-      params,
-    )
+    const result = await userRepository.insertNewUser(params)
 
     if (result.rowCount > 0) return res.sendStatus(201)
     res.sendStatus(500)
@@ -28,11 +24,10 @@ export async function registerUser(req, res) {
 
 export async function loginUser(req, res) {
   const { email, password } = req.body
+  const params = [email]
 
   try {
-    const user = await db.query(`SELECT * FROM users WHERE users.email = $1`, [
-      email,
-    ])
+    const user = await userRepository.getUserById(params)
 
     const foundUser = user.rows[0]
 
@@ -42,7 +37,7 @@ export async function loginUser(req, res) {
     }
     res.sendStatus(401)
   } catch (error) {
-    if (VERBOSE) console.log(error)
+    verboseConsoleLog("Error:", error)
     res.sendStatus(500)
   }
 }

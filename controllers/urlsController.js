@@ -1,11 +1,9 @@
-import db from "../config/db.js"
 import { nanoid } from "nanoid"
-import SqlString from "sqlString"
 
 import { formatData } from "./../utils/formatGetUserUrlsData.js"
-console.log("🚀 ~ formatData", formatData)
-
-const { VERBOSE } = process.env
+import { userRepository } from "../repositories/userRepository.js"
+import { urlsRepository } from "../repositories/urlsRepository.js"
+import verboseConsoleLog from "../utils/verboseConsoleLog.js"
 
 export async function shortenUrl(req, res) {
   const { url } = req.body
@@ -13,14 +11,13 @@ export async function shortenUrl(req, res) {
 
   const shortUrl = nanoid(10)
 
+  const params = [url, shortUrl, user.id]
+
   try {
-    const result = await db.query(
-      `INSERT INTO urls (url, short_url, user_id ) VALUES ($1, $2, ${user.id})`,
-      [url, shortUrl],
-    )
-    if (VERBOSE) console.log("🚀 ~ result", result)
+    const result = await urlsRepository.insertNewUrl(params)
+    verboseConsoleLog("Result:", result)
   } catch (error) {
-    if (VERBOSE) console.log("🚀 ~ error", error)
+    verboseConsoleLog("Error:", error)
     if (error.code === "23505") return shortenUrl(req, res)
     return res.sendStatus(400)
   }
@@ -30,19 +27,16 @@ export async function shortenUrl(req, res) {
 
 export async function getUrl(req, res) {
   const { id } = req.params
+  const params = [id]
 
   try {
-    const result = await db.query(
-      `SELECT urls.id, urls.short_url as "shortUrl", urls.url FROM urls WHERE urls.id = ${SqlString.escape(
-        id,
-      )}`,
-    )
-    if (VERBOSE) console.log("🚀 ~ result", result)
+    const result = await urlsRepository.getUrl(params)
+    verboseConsoleLog("Result:", result)
 
     if (result.rowCount === 0) return res.sendStatus(404)
     return res.send(result.rows[0])
   } catch (error) {
-    if (VERBOSE) console.log("🚀 ~ error", error)
+    verboseConsoleLog("Error:", error)
     return res.sendStatus(500)
   }
 }
@@ -51,22 +45,9 @@ export async function getUserUrls(req, res) {
   const { id } = req.params
 
   try {
-    const userResult = await db.query(
-      `SELECT users.id, users.name, sum(urls.visits) as "visitCount"
-      FROM users 
-      LEFT JOIN urls ON users.id = urls.user_id
-      WHERE users.id = ${SqlString.escape(id)}
-      GROUP BY users.id
-      `,
-    )
+    const userResult = await userRepository.getUserWithVisitCount(id)
 
-    const urlsResult = await db.query(
-      `SELECT urls.id, urls.short_url as "shortUrl", urls.url, urls.visits as "visitCount"
-      FROM users 
-      JOIN urls ON users.id = urls.user_id
-      WHERE users.id = ${SqlString.escape(id)}
-      `,
-    )
+    const urlsResult = await urlsRepository.getUserUrlsWithVisitCount(id)
 
     if (userResult.rowCount === 0) return res.sendStatus(404)
 
@@ -77,7 +58,7 @@ export async function getUserUrls(req, res) {
 
     return res.send(userData)
   } catch (error) {
-    if (VERBOSE) console.log("🚀 ~ error", error)
+    verboseConsoleLog("Error:", error)
     return res.sendStatus(500)
   }
 }
@@ -86,29 +67,21 @@ export async function openUrl(req, res) {
   const { shortUrl } = req.params
 
   try {
-    const result = await db.query(
-      `SELECT urls.url, urls.visits FROM urls WHERE urls.short_url = ${SqlString.escape(
-        shortUrl,
-      )}`,
-    )
-    if (VERBOSE) console.log("🚀 ~ result", result)
+    const result = await urlsRepository.getUrlFromShortUrl(shortUrl)
+
+    verboseConsoleLog("Result:", result)
 
     if (result.rowCount === 0) return res.sendStatus(404)
 
     const { url, visits } = result.rows[0]
-    console.log("🚀 ~ visits", visits)
-    console.log("🚀 ~ url", url)
 
-    const updated = await db.query(
-      `UPDATE urls SET visits = ${
-        visits + 1
-      } WHERE urls.short_url = ${SqlString.escape(shortUrl)}`,
-    )
-    if (VERBOSE) console.log("🚀 ~ updated", updated)
+    const updated = await urlsRepository.incrementVisitOnUrl(shortUrl, visits)
+
+    verboseConsoleLog("Updated:", updated)
 
     return res.redirect(url)
   } catch (error) {
-    if (VERBOSE) console.log("🚀 ~ error", error)
+    verboseConsoleLog("Error:", error)
     return res.sendStatus(500)
   }
 }
@@ -117,39 +90,26 @@ export async function deleteUrl(req, res) {
   const { id } = req.params
 
   try {
-    const result = await db.query(
-      `DELETE FROM urls WHERE urls.id = ${SqlString.escape(id)}`,
-    )
-    if (VERBOSE) console.log("🚀 ~ result", result)
+    const result = await urlsRepository.deleteUrlFromId(id)
+    verboseConsoleLog("Result:", result)
 
     if (result.rowCount === 0) return res.sendStatus(404)
-    return res.send(204)
+    return res.sendStatus(204)
   } catch (error) {
-    if (VERBOSE) console.log("🚀 ~ error", error)
+    verboseConsoleLog("Error:", error)
     return res.sendStatus(500)
   }
 }
 
-export async function getUrlsRank(req, res) {
+export async function getUrlsRanking(req, res) {
   try {
-    const result = await db.query(
-      `SELECT users.id
-      , users.name
-      , count(urls.id) AS "linksCount"
-      , coalesce(sum(urls.visits),
-            0) AS "visitCount"
-      FROM users
-      LEFT JOIN urls ON users.id = urls.user_id
-      GROUP BY users.id
-      ORDER BY "visitCount" DESC
-      LIMIT 10`,
-    )
+    const result = await urlsRepository.getAllUrlsRanking()
 
-    if (VERBOSE) console.log("🚀 ~ result", result)
+    verboseConsoleLog("Result:", result)
 
     return res.send(result.rows)
   } catch (error) {
-    if (VERBOSE) console.log("🚀 ~ error", error)
+    verboseConsoleLog("Error:", error)
     return res.sendStatus(500)
   }
 }
