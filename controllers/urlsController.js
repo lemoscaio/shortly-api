@@ -2,6 +2,9 @@ import db from "../config/db.js"
 import { nanoid } from "nanoid"
 import SqlString from "sqlString"
 
+import { formatData } from "./../utils/formatGetUserUrlsData.js"
+console.log("🚀 ~ formatData", formatData)
+
 const { VERBOSE } = process.env
 
 export async function shortenUrl(req, res) {
@@ -38,6 +41,41 @@ export async function getUrl(req, res) {
 
     if (result.rowCount === 0) return res.sendStatus(404)
     return res.send(result.rows[0])
+  } catch (error) {
+    if (VERBOSE) console.log("🚀 ~ error", error)
+    return res.sendStatus(500)
+  }
+}
+
+export async function getUserUrls(req, res) {
+  const { id } = req.params
+
+  try {
+    const userResult = await db.query(
+      `SELECT users.id, users.name, sum(urls.visits) as "visitCount"
+      FROM users 
+      LEFT JOIN urls ON users.id = urls.user_id
+      WHERE users.id = ${SqlString.escape(id)}
+      GROUP BY users.id
+      `,
+    )
+
+    const urlsResult = await db.query(
+      `SELECT urls.id, urls.short_url as "shortUrl", urls.url, urls.visits as "visitCount"
+      FROM users 
+      JOIN urls ON users.id = urls.user_id
+      WHERE users.id = ${SqlString.escape(id)}
+      `,
+    )
+
+    if (userResult.rowCount === 0) return res.sendStatus(404)
+
+    const userData = formatData.getUserUrlsData(
+      userResult.rows[0],
+      urlsResult.rows,
+    )
+
+    return res.send(userData)
   } catch (error) {
     if (VERBOSE) console.log("🚀 ~ error", error)
     return res.sendStatus(500)
@@ -86,6 +124,30 @@ export async function deleteUrl(req, res) {
 
     if (result.rowCount === 0) return res.sendStatus(404)
     return res.send(204)
+  } catch (error) {
+    if (VERBOSE) console.log("🚀 ~ error", error)
+    return res.sendStatus(500)
+  }
+}
+
+export async function getUrlsRank(req, res) {
+  try {
+    const result = await db.query(
+      `SELECT users.id
+      , users.name
+      , count(urls.id) AS "linksCount"
+      , coalesce(sum(urls.visits),
+            0) AS "visitCount"
+      FROM users
+      LEFT JOIN urls ON users.id = urls.user_id
+      GROUP BY users.id
+      ORDER BY "visitCount" DESC
+      LIMIT 10`,
+    )
+
+    if (VERBOSE) console.log("🚀 ~ result", result)
+
+    return res.send(result.rows)
   } catch (error) {
     if (VERBOSE) console.log("🚀 ~ error", error)
     return res.sendStatus(500)
