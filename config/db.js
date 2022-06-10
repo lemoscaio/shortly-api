@@ -20,6 +20,6 @@ if (process.env.MODE === "PROD") {
   }
 }
 
-const db = new Pool(process.env.NODE_ENV === "PROD" ? prodConfig : devConfig)
+const db = new Pool(process.env.MODE === "PROD" ? prodConfig : devConfig)
 
 export default db
